@@ -1,0 +1,6 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+NearestNeighborsTest = "1d4e4914-a46b-4e08-8d2f-7bc89898521c"
+
+[sources]
+NearestNeighborsTest = {path = ".."}
