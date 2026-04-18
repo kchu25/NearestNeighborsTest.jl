@@ -3,7 +3,13 @@ uuid = "1d4e4914-a46b-4e08-8d2f-7bc89898521c"
 authors = ["Shane Kuei-Hsien Chu (skchu@wustl.edu)"]
 version = "1.0.0-DEV"
 
+[deps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+
 [compat]
+CUDA = "5"
 julia = "1.12.2"
 
 [extras]

@@ -2,13 +2,19 @@
 CurrentModule = NearestNeighborsTest
 ```
 
-# NearestNeighborsTest
+# NearestNeighborsTest.jl
 
-Documentation for [NearestNeighborsTest](https://github.com/kchu25/NearestNeighborsTest.jl).
+NearestNeighborsTest.jl provides nearest-neighbor distance (NND) permutation tests for 1-D data, with optional CUDA GPU acceleration.
 
-```@index
+## Exported Functions
+
+```@docs
+nnd_permutation_test_1d
+nnd_sensitivity_batch_1d
 ```
 
-```@autodocs
-Modules = [NearestNeighborsTest]
+## Internal
+
+```@docs
+NearestNeighborsTest.mean_knn_within_group_1d
 ```
