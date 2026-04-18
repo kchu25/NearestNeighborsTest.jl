@@ -55,11 +55,11 @@ Left: A **clustered** subpopulation (red dots) is packed together, giving small 
 
 Right: A **random** subpopulation (blue dots) is scattered throughout the background → **large p-value** (not significant).
 
-### How k-NN Distance Works
+<!-- ### How k-NN Distance Works
 
 ![k-NN Distance](assets/illustration_knn.png)
 
-For each point in the sorted subpopulation, we find the k nearest neighbors **within the group** and measure the distance to the k-th neighbor. The arcs above show this distance for a few highlighted points. Clustered groups have short k-NN distances; random groups have longer ones.
+For each point in the sorted subpopulation, we find the k nearest neighbors **within the group** and measure the distance to the k-th neighbor. The arcs above show this distance for a few highlighted points. Clustered groups have short k-NN distances; random groups have longer ones. -->
 
 ### Sensitivity Analysis (Multiple k Values)
 
