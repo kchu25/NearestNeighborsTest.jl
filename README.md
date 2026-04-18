@@ -41,6 +41,26 @@ result_gpu = nnd_permutation_test_1d(subpop_positions, background; k=30, B=5_000
 println("GPU: k=$(result_gpu.k)  p=$(result_gpu.p_value)")
 ```
 
+## What Is the NND Test?
+
+The **nearest-neighbor distance (NND) permutation test** asks: *Is this subpopulation more tightly clustered than a random sample?*
+
+The test works on 1-D data and computes the mean **within-group** k-NN distance. Here's why it's useful:
+
+### Illustration: Clustered vs Random
+
+![Concept](assets/illustration_concept.png)
+
+Left: A **clustered** subpopulation (red dots) is packed together, giving small within-group k-NN distances → **small p-value** (significant).
+
+Right: A **random** subpopulation (blue dots) is scattered throughout the background → **large p-value** (not significant).
+
+### How k-NN Distance Works
+
+![k-NN Distance](assets/illustration_knn.png)
+
+For each point in the sorted subpopulation, we find the k nearest neighbors **within the group** and measure the distance to the k-th neighbor. The arcs above show this distance for a few highlighted points. Clustered groups have short k-NN distances; random groups have longer ones.
+
 ### Sensitivity Analysis (Multiple k Values)
 
 ```julia
