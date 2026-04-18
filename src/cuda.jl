@@ -218,15 +218,8 @@ end
 #  Host wrappers
 # ─────────────────────────────────────────────────────────────────────
 
-"""
-    _nnd_permutation_test_1d_gpu(subpop_positions, background; k, B, seed)
-
-GPU-accelerated single-k NND permutation test (internal).
-
-All `B×m` random samples are generated on-device via cuRAND — no CPU
-randperm loop, no PCIe transfer of random indices.  One CUDA block per
-permutation with shared-memory bitonic sort + k-NN scan.
-"""
+# GPU-accelerated single-k NND permutation test (internal).
+# All B×m random samples are generated on-device via cuRAND.
 function _nnd_permutation_test_1d_gpu(
     subpop_positions::AbstractVector{<:Integer},
     background::AbstractVector{T};
@@ -263,13 +256,8 @@ function _nnd_permutation_test_1d_gpu(
     return (; k=k_c, obs_mNND=Float64(obs), p_value)
 end
 
-"""
-    _nnd_sensitivity_batch_1d_gpu(subpop_positions, background; ks, B, seed)
-
-GPU-accelerated sensitivity batch (internal). One sort per permutation
-block; k-NN evaluated for each k reusing the already-sorted shared-memory
-buffer.
-"""
+# GPU-accelerated sensitivity batch (internal).
+# One sort per permutation block; k-NN evaluated for each k reusing sorted shmem.
 function _nnd_sensitivity_batch_1d_gpu(
     subpop_positions::AbstractVector{<:Integer},
     background::AbstractVector{T};

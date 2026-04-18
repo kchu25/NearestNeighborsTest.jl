@@ -13,7 +13,7 @@ nnd_permutation_test_1d
 nnd_sensitivity_batch_1d
 ```
 
-## Internal
+## Internals
 
 ```@docs
 NearestNeighborsTest.mean_knn_within_group_1d

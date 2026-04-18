@@ -1,8 +1,4 @@
-"""
-    _next_pow2(n::Int) -> Int
-
-Smallest power of two ≥ `n`.
-"""
+# Smallest power of two ≥ `n`.
 _next_pow2(n::Int) = 1 << ceil(Int, log2(max(n, 1)))
 
 """
