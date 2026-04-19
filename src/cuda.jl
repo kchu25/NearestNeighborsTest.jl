@@ -215,6 +215,33 @@ function _nnd_sensitivity_kernel!(
 end
 
 # ─────────────────────────────────────────────────────────────────────
+#  Shared-memory launch helper
+# ─────────────────────────────────────────────────────────────────────
+const _DEFAULT_SHMEM_LIMIT = 48 * 1024   # 48 KB
+
+# Request extended dynamic shared memory for a kernel if needed.
+# Returns the shmem size (unchanged) or throws a clear error.
+function _ensure_shmem!(kernel, shmem::Int)
+    if shmem > _DEFAULT_SHMEM_LIMIT
+        dev = CUDA.device()
+        max_shmem = CUDA.attribute(dev, CUDA.CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN)
+        if shmem > max_shmem
+            error(
+                "Subpopulation size requires $(shmem ÷ 1024) KB shared memory, " *
+                "but GPU $(CUDA.name(dev)) supports at most $(max_shmem ÷ 1024) KB. " *
+                "Reduce subpopulation size or use CPU mode (cuda=false)."
+            )
+        end
+        CUDA.cuFuncSetAttribute(
+            kernel.fun,
+            CUDA.CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES,
+            shmem
+        )
+    end
+    return shmem
+end
+
+# ─────────────────────────────────────────────────────────────────────
 #  Host wrappers
 # ─────────────────────────────────────────────────────────────────────
 
@@ -243,14 +270,14 @@ function _nnd_permutation_test_1d_gpu(
     nthreads = Int32(min(1024, Int(m_pad)))
     shmem    = Int((m_pad + nthreads) * sizeof(Float32))
 
-    @cuda(
-        blocks  = B,
-        threads = nthreads,
-        shmem   = shmem,
-        _nnd_perm_kernel!(cnt_dev, bg_dev, rf_dev,
-                          Int32(n_bg), obs,
-                          Int32(m), m_pad, Int32(k_c))
-    )
+    kernel = @cuda launch=false _nnd_perm_kernel!(
+        cnt_dev, bg_dev, rf_dev,
+        Int32(n_bg), obs, Int32(m), m_pad, Int32(k_c))
+    _ensure_shmem!(kernel, shmem)
+    kernel(cnt_dev, bg_dev, rf_dev,
+           Int32(n_bg), obs, Int32(m), m_pad, Int32(k_c);
+           blocks=B, threads=nthreads, shmem=shmem)
+
     CUDA.synchronize()
     p_value = Int(Array(cnt_dev)[1]) / B
     return (; k=k_c, obs_mNND=Float64(obs), p_value)
@@ -284,14 +311,16 @@ function _nnd_sensitivity_batch_1d_gpu(
     nthreads = Int32(min(1024, Int(m_pad)))
     shmem    = Int((m_pad + nthreads) * sizeof(Float32))
 
-    @cuda(
-        blocks  = B,
-        threads = nthreads,
-        shmem   = shmem,
-        _nnd_sensitivity_kernel!(cnt_dev, bg_dev, rf_dev,
-                                 obs_dev, ks_dev, Int32(n_ks),
-                                 Int32(n_bg), Int32(m), m_pad)
-    )
+    kernel = @cuda launch=false _nnd_sensitivity_kernel!(
+        cnt_dev, bg_dev, rf_dev,
+        obs_dev, ks_dev, Int32(n_ks),
+        Int32(n_bg), Int32(m), m_pad)
+    _ensure_shmem!(kernel, shmem)
+    kernel(cnt_dev, bg_dev, rf_dev,
+           obs_dev, ks_dev, Int32(n_ks),
+           Int32(n_bg), Int32(m), m_pad;
+           blocks=B, threads=nthreads, shmem=shmem)
+
     CUDA.synchronize()
     counts = Array(cnt_dev)
     inv_B  = 1.0 / B

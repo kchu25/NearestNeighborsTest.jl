@@ -1,5 +1,6 @@
 using NearestNeighborsTest
 using Random
+using CUDA
 using Test
 
 # Convenience alias for the internal helper
@@ -310,6 +311,105 @@ const pow2  = NearestNeighborsTest._next_pow2
             results = nnd_sensitivity_batch_1d(pos, bg; ks=ks, B=100, seed=1)
             obs = [r.obs_mNND for r in results]
             @test issorted(obs)
+        end
+    end
+
+    # ─────────────────────────────────────────────────────────────────
+    @testset "GPU tests" begin
+        if !CUDA.functional()
+            @warn "CUDA not available — skipping GPU tests"
+        else
+            @testset "nnd_permutation_test_1d (GPU)" begin
+                @testset "clustered → small p-value" begin
+                    rng = MersenneTwister(1)
+                    n_bg = 10_000; m = 200
+                    bg = rand(rng, Float64, n_bg)
+                    pos = sort(randperm(rng, n_bg)[1:m])
+                    for p in pos; bg[p] = 0.5 + 0.01 * randn(rng); end
+
+                    r = nnd_permutation_test_1d(pos, bg; k=10, B=500, seed=42, cuda=true)
+                    @test r.p_value < 0.05
+                    @test r.k == 10
+                    @test r.obs_mNND > 0.0
+                end
+
+                @testset "null → p not tiny" begin
+                    rng = MersenneTwister(99)
+                    n_bg = 5_000; m = 100
+                    bg = rand(rng, Float64, n_bg)
+                    pos = sort(randperm(rng, n_bg)[1:m])
+
+                    r = nnd_permutation_test_1d(pos, bg; k=5, B=500, seed=42, cuda=true)
+                    @test r.p_value > 0.01
+                end
+
+                @testset "CPU vs GPU agreement" begin
+                    rng = MersenneTwister(7)
+                    n_bg = 10_000; m = 300
+                    bg = rand(rng, Float32, n_bg)
+                    pos = sort(randperm(rng, n_bg)[1:m])
+                    for p in pos; bg[p] = 0.5f0 + 0.01f0 * randn(rng, Float32); end
+
+                    r_cpu = nnd_permutation_test_1d(pos, bg; k=10, B=1_000, seed=42, cuda=false)
+                    r_gpu = nnd_permutation_test_1d(pos, bg; k=10, B=1_000, seed=42, cuda=true)
+
+                    # obs_mNND should match (both computed on CPU)
+                    @test r_cpu.obs_mNND ≈ r_gpu.obs_mNND atol=1e-4
+                    @test r_cpu.k == r_gpu.k
+
+                    # p-values: statistically close (different RNG paths)
+                    p_mid = (r_cpu.p_value + r_gpu.p_value) / 2
+                    se = sqrt(2 * p_mid * (1 - p_mid) / 1_000)
+                    @test abs(r_cpu.p_value - r_gpu.p_value) < 5 * se + 0.01
+                end
+
+                @testset "k clamped" begin
+                    rng = MersenneTwister(11)
+                    bg = rand(rng, 1_000)
+                    pos = sort(randperm(rng, 1_000)[1:10])
+
+                    r = nnd_permutation_test_1d(pos, bg; k=50, B=100, seed=1, cuda=true)
+                    @test r.k == 9
+                end
+            end
+
+            @testset "nnd_sensitivity_batch_1d (GPU)" begin
+                @testset "structure and bounds" begin
+                    rng = MersenneTwister(1)
+                    n_bg = 10_000; m = 200
+                    bg = rand(rng, Float64, n_bg)
+                    pos = sort(randperm(rng, n_bg)[1:m])
+                    for p in pos; bg[p] = 0.5 + 0.01 * randn(rng); end
+
+                    ks = [5, 10, 20]
+                    results = nnd_sensitivity_batch_1d(pos, bg; ks=ks, B=500, seed=42, cuda=true)
+                    @test length(results) == 3
+                    for r in results
+                        @test 0.0 <= r.p_value <= 1.0
+                        @test r.obs_mNND > 0.0
+                    end
+                end
+
+                @testset "CPU vs GPU agreement (batch)" begin
+                    rng = MersenneTwister(3)
+                    n_bg = 10_000; m = 200
+                    bg = rand(rng, Float32, n_bg)
+                    pos = sort(randperm(rng, n_bg)[1:m])
+                    for p in pos; bg[p] = 0.5f0 + 0.01f0 * randn(rng, Float32); end
+
+                    ks = [5, 10, 20]
+                    rs_cpu = nnd_sensitivity_batch_1d(pos, bg; ks=ks, B=1_000, seed=42, cuda=false)
+                    rs_gpu = nnd_sensitivity_batch_1d(pos, bg; ks=ks, B=1_000, seed=42, cuda=true)
+
+                    for (rc, rg) in zip(rs_cpu, rs_gpu)
+                        @test rc.obs_mNND ≈ rg.obs_mNND atol=1e-4
+                        @test rc.k == rg.k
+                        p_mid = (rc.p_value + rg.p_value) / 2
+                        se = sqrt(2 * p_mid * (1 - p_mid) / 1_000)
+                        @test abs(rc.p_value - rg.p_value) < 5 * se + 0.01
+                    end
+                end
+            end
         end
     end
 
