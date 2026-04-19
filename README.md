@@ -102,7 +102,10 @@ nnd_permutation_test_1d(subpop_positions, background; k=30, B=1_000, seed=42, cu
 
 Test whether points at `subpop_positions` within `background` are more tightly clustered among themselves than a random draw of the same size.
 
-**Returns:** `NamedTuple` `(k, obs_mNND, p_value)`
+**Returns:** `NamedTuple` with fields:
+- `k` — the actual k used (may be less than requested if `k ≥ m`)
+- `obs_mNND` — the observed mean k-th nearest-neighbor distance within the subpopulation
+- `p_value` — fraction of null permutations whose within-group mNND ≤ `obs_mNND`; small values indicate significant clustering
 
 ### `nnd_sensitivity_batch_1d`
 
@@ -112,7 +115,10 @@ nnd_sensitivity_batch_1d(subpop_positions, background; ks, B=1_000, seed=42, cud
 
 Batched NND test across multiple `k` values. Shares random draws across all `k` for efficiency.
 
-**Returns:** `Vector` of `NamedTuple`s `(k, obs_mNND, p_value)`
+**Returns:** `Vector` of `NamedTuple`s, one per entry in `ks`, each with fields:
+- `k` — the actual k used (clamped to `m-1` if needed)
+- `obs_mNND` — observed mean k-th nearest-neighbor distance within the subpopulation
+- `p_value` — fraction of null permutations whose within-group mNND ≤ `obs_mNND`
 
 ## Method
 
